@@ -113,11 +113,14 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<fileInfo id="com.atollic.truestudio.exe.debug.461487905.419031289" name="Gpio_utility.c" rcbsApplicability="disable" resourcePath="src/Gpio_utility.c" toolsToInvoke="com.atollic.truestudio.exe.debug.toolchain.gcc.693276173.655900515">
+						<tool id="com.atollic.truestudio.exe.debug.toolchain.gcc.693276173.655900515" name="C Compiler" superClass="com.atollic.truestudio.exe.debug.toolchain.gcc.693276173"/>
+					</fileInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="Drivers"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="inc"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="src"/>
-						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="startup"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Drivers"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="inc"/>
+						<entry excluding="Gpio_utility.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="startup"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
