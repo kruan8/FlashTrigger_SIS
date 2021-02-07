@@ -18,10 +18,11 @@
 #define HW_INPUT                  PA10
 
 #define HW_SLAVE                  PA9
+
 // LED
 #define HW_LED                    PA4
-#define HW_LED_ON                 GPIO_RESETPIN(HW_LED)
-#define HW_LED_OFF                GPIO_SETPIN(HW_LED)
+#define HW_LED_OFF                GPIO_RESETPIN(HW_LED)
+#define HW_LED_ON                 GPIO_SETPIN(HW_LED)
 
 // flash output
 #define HW_FLASH                  PC14
@@ -43,26 +44,24 @@ void HW_Init(void)
 {
   Timer_Init();
 
-  GPIO_ClockEnable(HW_LED);
-  HW_LED_OFF;
   GPIO_ConfigPin(HW_LED, mode_output, outtype_pushpull, pushpull_no, speed_low);
+  HW_LED_OFF;
 
-  GPIO_ClockEnable(HW_FLASH);
-  HW_FLASH_OFF;
   GPIO_ConfigPin(HW_FLASH, mode_output, outtype_pushpull, pushpull_no, speed_low);
+  HW_FLASH_OFF;
 
-  GPIO_ClockEnable(HW_BUTTON);
   GPIO_ConfigPin(HW_BUTTON, mode_input, outtype_pushpull, pushpull_up, speed_low);
 
-  GPIO_ClockEnable(HW_INPUT);
   GPIO_ConfigPin(HW_INPUT, mode_input, outtype_pushpull, pushpull_up, speed_medium);
+
+  GPIO_ConfigPin(HW_SLAVE, mode_input, outtype_pushpull, pushpull_up, speed_low);
 
   Timer_SetSysTickCallback(_SysTickCallback);
 }
 
 bool HW_IsMaster(void)
 {
-  return (GET_PORT(HW_SLAVE)->IDR & GET_PIN(HW_SLAVE)) ? true : false;
+  return (GET_PORT(HW_SLAVE)->IDR & GET_PIN(HW_SLAVE)) ? false : true;
 }
 
 void HW_LedBlink(uint16_t nDuration_ms)
@@ -108,6 +107,11 @@ uint16_t HW_IsButtonPressed_ms(void)
   }
 
   return 0;
+}
+
+bool HW_IsInputActive(void)
+{
+  return (GET_PORT(HW_INPUT)->IDR & GET_PIN(HW_INPUT)) ? false : true;
 }
 
 // prechod Standby modu

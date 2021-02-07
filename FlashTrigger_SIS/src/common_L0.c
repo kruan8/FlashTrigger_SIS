@@ -63,6 +63,8 @@ uint16_t GPIO_GetPinSource(uint16_t GPIO_Pin)
 
 void GPIO_ConfigPin(gpio_pins_e ePin, pin_mode_e eMode, pin_output_type_e eOutType, pin_pushpull_e ePull, pin_speed_e eSpeed)
 {
+  GPIO_ClockEnable(ePin);
+
   LL_GPIO_SetPinMode(GET_PORT(ePin), GET_PIN(ePin), eMode);
 
   LL_GPIO_SetPinOutputType(GET_PORT(ePin), GET_PIN(ePin), eOutType);

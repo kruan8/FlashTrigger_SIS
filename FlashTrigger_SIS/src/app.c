@@ -12,7 +12,7 @@
 
 #include <string.h>
 
-
+#define OFF_INTERVAL_MS              (1000*60*10)  // 10 minutes
 #define CHECK_INTERVAL_MS            2500
 #define FLASH_TRANSMIT_COUNT         3
 
@@ -28,6 +28,7 @@
 #define EEPROM_FLASHES               (EEPROM_FLASH_INTERVAL + sizeof(uint32_t))    // pocet zablesku
 
 #define BUFFER_LEN                   5
+
 
 const uint8_t g_CheckStamp = { 100 };
 const uint8_t g_FlashStamp = { 200 };
@@ -73,6 +74,9 @@ void App_Init(void)
   {
     while (1);
   }
+
+  HW_SetOffInterval(OFF_INTERVAL_MS);
+  while (HW_IsButtonPressed_ms());
 }
 
 void App_Exec(void)
@@ -106,6 +110,19 @@ void _MasterExec(void)
 {
   static uint32_t nNextCheckTime = 0;
 
+  if (HW_IsInputActive())
+  {
+    HW_LedBlink(500);
+    for (uint8_t i = 0; i < FLASH_TRANSMIT_COUNT; ++i)
+    {
+      SI4463_SendData((uint8_t*)&g_FlashStamp, sizeof(g_FlashStamp));
+    }
+
+    HW_SetOffInterval(FLASH_TRANSMIT_COUNT);
+    nNextCheckTime = Timer_GetTicks_ms() + CHECK_INTERVAL_MS;
+    App_WaitAfterFlash();
+  }
+
   if (Timer_GetTicks_ms() > nNextCheckTime)
   {
     nNextCheckTime = Timer_GetTicks_ms() + CHECK_INTERVAL_MS;
@@ -118,7 +135,8 @@ void _MasterExec(void)
 
 void _SlaveExec(void)
 {
-  SI4463_ReadData()
+  uint8_t buffer[10];
+  SI4463_ReadData(buffer, sizeof(buffer), 10000);
 }
 
 void App_WaitAfterFlash(void)

@@ -18,6 +18,7 @@ void HW_LedBlink(uint16_t nDuration_ms);
 void HW_FlashBlink(void);
 void HW_LedOffDiming(void);
 uint16_t HW_IsButtonPressed_ms(void);
+bool HW_IsInputActive(void);
 void HW_StandbyMode(void);
 void HW_DeviceOff(void);
 void HW_SetOffInterval(uint32_t nInterval_ms);

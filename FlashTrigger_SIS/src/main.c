@@ -7,7 +7,7 @@
 
 #include "stm32l0xx.h"
 #include "clock.h"
-#include "trigger_app.h"
+#include "app.h"
 
 /* ------------------------------------------------------------------------------
  * HW usage:

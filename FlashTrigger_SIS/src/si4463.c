@@ -14,12 +14,12 @@
 #include <string.h>
 
 // Chip select pin
-#define SI4463_CS             PA4
+#define SI4463_CS             PB1
 #define SI4463_CS_ENABLE      GPIO_RESETPIN(SI4463_CS)
 #define SI4463_CS_DISABLE     GPIO_SETPIN(SI4463_CS)
 
 // Shoutdown pin
-#define SI4463_SDN            PA3
+#define SI4463_SDN            PA2
 #define SI4463_SDN_ENABLE     GPIO_SETPIN(SI4463_SDN)
 #define SI4463_SDN_DISABLE    GPIO_RESETPIN(SI4463_SDN)
 
