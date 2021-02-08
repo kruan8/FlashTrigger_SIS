@@ -137,6 +137,9 @@ void _SlaveExec(void)
 {
   uint8_t buffer[10];
   SI4463_ReadData(buffer, sizeof(buffer), 10000);
+
+  HW_FlashBlink();
+
 }
 
 void App_WaitAfterFlash(void)
