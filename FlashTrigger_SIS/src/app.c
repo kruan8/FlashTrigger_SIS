@@ -12,52 +12,25 @@
 
 #include <string.h>
 
-#define OFF_INTERVAL_MS              (1000*60*10)  // 10 minutes
-#define CHECK_INTERVAL_MS            2500
-#define FLASH_TRANSMIT_COUNT         3
+#define APP_CHECK_INTERVAL_MS               2500              // interval for CHECK packet sending
+#define APP_FLASH_TRANSMIT_COUNT             3
 
-#define FLASH_LIMIT_STD              2
-#define FLASH_LIMIT_PRG              8
+#define APP_OFF_INTERVAL_MS                 (1000 * 60 * 5)   // off interval po zapnuti (bez signalu) - 5 minut
+#define APP_OFF_INTERVAL_RCV_MS             (1000 * 60 * 10)  // off interval po prijeti signalu - 10 minut
+#define APP_BUTTON_INTERVAL_FOR_FLASH_MS    1500              // interval for Flash
 
-#define STD_OFF_INTERVAL_MS          (1000 * 60 * 3)   // off interval po zapnuti (bez signalu) - 5 minut
-#define STD_OFF_INTERVAL_RCV_MS      (1000 * 60 * 15)  // off interval po prijeti signalu - 15 minut
-
-#define PRG_OFF_INTERVAL_MS          (1000 * 60 * 1)    // 1 minuta
-
-#define EEPROM_FLASH_INTERVAL        0                                             // interval mezi zablesky
-#define EEPROM_FLASHES               (EEPROM_FLASH_INTERVAL + sizeof(uint32_t))    // pocet zablesku
-
-#define BUFFER_LEN                   5
-
-
-const uint8_t g_CheckStamp = { 100 };
-const uint8_t g_FlashStamp = { 200 };
-
-
-uint8_t RxBuffer[BUFFER_LEN];
-
-volatile FlagStatus g_RxDoneFlag = RESET;
-volatile FlagStatus g_RXtimeout = RESET;
-volatile FlagStatus g_RXdataDisc = RESET;
-
-volatile FlagStatus g_TxDoneFlag = RESET;
-volatile FlagStatus cmdFlag = RESET;
-volatile FlagStatus xStartRx = RESET;
+const uint8_t g_CheckStamp = { 0xAA };
+const uint8_t g_FlashStamp = { 0x55 };
 
 uint16_t exitCounter = 0;
-uint8_t TxFrameBuff[BUFFER_LEN];
 
 AppState_t g_eState = APP_STATE_IDLE;
 
 uint8_t g_bMaster = 0;
 
-volatile uint16_t g_nDelayTimer;    // odmerovani intervalu
-volatile bool g_bDelayOver;
 
-uint8_t  g_nTransmitCounter;          // citani poctu vysilani pro FLASH
-
-void _MasterExec(void);
-void _SlaveExec(void);
+void _MasterExec(bool bManualFlash);
+void _SlaveExec(bool bManualFlash);
 
 void App_Init(void)
 {
@@ -75,19 +48,21 @@ void App_Init(void)
     while (1);
   }
 
-  HW_SetOffInterval(OFF_INTERVAL_MS);
+  HW_SetOffInterval(APP_OFF_INTERVAL_MS);
   while (HW_IsButtonPressed_ms());
 }
 
 void App_Exec(void)
 {
+  static bool bManualFlash = false;
+
   if (g_bMaster)
   {
-    _MasterExec();
+    _MasterExec(bManualFlash);
   }
   else
   {
-    _SlaveExec();
+    _SlaveExec(bManualFlash);
   }
 
   // kontrola casovace vypnuti (do Standby modu)
@@ -96,36 +71,50 @@ void App_Exec(void)
     HW_StandbyMode();
   }
 
-  // kontrola stisku tlacitka
-  if (HW_IsButtonPressed_ms())
+  bManualFlash = false;
+
+  // kontrola stisku tlacitka (vypnuti / flash)
+  uint32_t nButtonPressDuration_ms = 0;
+  uint32_t nMaxDuration = 0;
+
+  // wait for button release
+  while ((nButtonPressDuration_ms = HW_IsButtonPressed_ms()) > 0)
   {
-    // Todo: zde by se mel resit stisk tlacitka pri MANUAL modu
-    while (!HW_IsButtonPressed_ms());
-    HW_DeviceOff();
+    nMaxDuration = nButtonPressDuration_ms;
   }
 
+  if (nMaxDuration > APP_BUTTON_INTERVAL_FOR_FLASH_MS)
+  {
+    bManualFlash = true;
+  }
+  else if (nMaxDuration > 0)
+  {
+    HW_DeviceOff();
+  }
 }
 
-void _MasterExec(void)
+void _MasterExec(bool bManualFlash)
 {
   static uint32_t nNextCheckTime = 0;
 
-  if (HW_IsInputActive())
+  if (HW_IsInputActive() || bManualFlash)
   {
     HW_LedBlink(500);
-    for (uint8_t i = 0; i < FLASH_TRANSMIT_COUNT; ++i)
+    for (uint8_t i = 0; i < APP_FLASH_TRANSMIT_COUNT; ++i)
     {
       SI4463_SendData((uint8_t*)&g_FlashStamp, sizeof(g_FlashStamp));
     }
 
-    HW_SetOffInterval(FLASH_TRANSMIT_COUNT);
-    nNextCheckTime = Timer_GetTicks_ms() + CHECK_INTERVAL_MS;
-    App_WaitAfterFlash();
+    HW_SetOffInterval(APP_OFF_INTERVAL_RCV_MS);
+    nNextCheckTime = Timer_GetTicks_ms() + APP_CHECK_INTERVAL_MS;
+
+    // wait for flash impulse ending
+    while (HW_IsInputActive());
   }
 
   if (Timer_GetTicks_ms() > nNextCheckTime)
   {
-    nNextCheckTime = Timer_GetTicks_ms() + CHECK_INTERVAL_MS;
+    nNextCheckTime = Timer_GetTicks_ms() + APP_CHECK_INTERVAL_MS;
     HW_LedBlink(100);
 
     // send CHECK
@@ -133,18 +122,24 @@ void _MasterExec(void)
   }
 }
 
-void _SlaveExec(void)
+void _SlaveExec(bool bManualFlash)
 {
   uint8_t buffer[10];
-  SI4463_ReadData(buffer, sizeof(buffer), 10000);
+  uint8_t nSize = SI4463_ReadData(buffer, sizeof(buffer), 10000);
+  if (nSize == 0)
+  {
+    return;
+  }
 
-  HW_FlashBlink();
+  if (buffer[0] == g_CheckStamp)
+  {
+    HW_LedBlink(100);
+  }
 
-}
+  if (buffer[0] == g_FlashStamp)
+  {
+    HW_FlashBlink();
+    HW_SetOffInterval(APP_OFF_INTERVAL_RCV_MS);
+  }
 
-void App_WaitAfterFlash(void)
-{
-  // wait 5 ms pro odezneni zablesku
-  g_nDelayTimer = 100;  // 100 * 50 us
-  while (g_nDelayTimer);
 }

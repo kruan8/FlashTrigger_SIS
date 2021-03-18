@@ -26,11 +26,7 @@ typedef enum
   APP_STATE_WAIT_FOR_TX_DONE_FLASH,
 } AppState_t;
 
-
 void App_Exec(void);
 void App_Init(void);
-
-bool App_CheckFlash(void);
-void App_WaitAfterFlash(void);
 
 #endif /* APP_H_ */

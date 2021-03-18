@@ -26,6 +26,8 @@
 static spi_drv_t *g_pDrv;   // SPI driver
 static uint8_t g_nChannel;  // Rx/Tx channel
 
+static const uint8_t Radio_Conf_Array[] = RADIO_CONFIGURATION_DATA_ARRAY;
+
 //------------------------------- SI4463_Init ------------------------------
 bool SI4463_Init(void)
 {
@@ -56,12 +58,11 @@ bool SI4463_Init(void)
     return false;
   }
 
-  uint8_t Radio_Conf_Array[] = RADIO_CONFIGURATION_DATA_ARRAY;
   uint16_t place = 0;
 
   while(*(Radio_Conf_Array + place) != 0x00)
   {
-    SI4463_SetProperty((Radio_Conf_Array + place + 1), *(Radio_Conf_Array + place));
+    SI4463_SetProperty((uint8_t*)(Radio_Conf_Array + place + 1), *(Radio_Conf_Array + place));
 
     place += *(Radio_Conf_Array + place) + 1;
   }

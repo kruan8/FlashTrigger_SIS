@@ -29,14 +29,14 @@
 #define HW_FLASH_ON               GPIO_SETPIN(HW_FLASH)
 #define HW_FLASH_OFF              GPIO_RESETPIN(HW_FLASH)
 
-#define FLASH_DURATION_MS               6           // delka impulsu na tyristoru spinani blesku
+#define FLASH_DURATION_MS         6     // delka impulsu na tyristoru spinani blesku
 
 uint16_t g_nLedInterval;                // citac delky svitu LED
 uint16_t g_nFlashInterval_ms;           // citac delky impulsu na tyristoru
 uint32_t g_nOffInterval;                // citani intervalu do vypnuti
 
 volatile bool g_bButtonPressed = true;
-volatile uint16_t g_nButtonStateDuration;
+volatile uint32_t g_nButtonStateDuration;
 
 static void _SysTickCallback(void);
 
@@ -99,11 +99,11 @@ void HW_LedOffDiming(void)
 }
 
 // pokud je tlacitko stisknuto, vraci dobu trvani stisknuti v ms, jinak 0
-uint16_t HW_IsButtonPressed_ms(void)
+uint32_t HW_IsButtonPressed_ms(void)
 {
   if (g_bButtonPressed)
   {
-    return 1;
+    return g_nButtonStateDuration;
   }
 
   return 0;
@@ -117,8 +117,6 @@ bool HW_IsInputActive(void)
 // prechod Standby modu
 void HW_StandbyMode(void)
 {
-  //Spirit_EnterShutdown();
-
   // to standby
   RCC->APB1ENR |= RCC_APB1ENR_PWREN;  // PWR enable
   PWR->CSR |= PWR_CSR_EWUP1;          // Enable WKUP pin 1
@@ -200,7 +198,9 @@ static void _SysTickCallback(void)
       g_nButtonStateDuration += 4;
     }
     else
+    {
       key_cnt--;
+    }
 
     old_state = state;
   }
