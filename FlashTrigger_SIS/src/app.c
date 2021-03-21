@@ -95,7 +95,7 @@ void App_Exec(void)
 
 void _MasterExec(bool bManualFlash)
 {
-  static uint32_t nNextCheckTime = 0;
+  static uint32_t nNextCheckTime = APP_CHECK_INTERVAL_MS;
 
   if (HW_IsInputActive() || bManualFlash)
   {
