@@ -26,7 +26,7 @@ uint16_t exitCounter = 0;
 
 AppState_t g_eState = APP_STATE_IDLE;
 
-uint8_t g_bMaster = 0;
+bool g_bMaster = 0;
 
 
 void _MasterExec(bool bManualFlash);

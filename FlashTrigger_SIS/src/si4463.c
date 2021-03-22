@@ -11,6 +11,9 @@
 #include "spi_l0.h"
 #include "timer.h"
 
+#include "stm32l0xx_ll_exti.h"
+#include "stm32l0xx_ll_system.h"
+
 #include <string.h>
 
 // Chip select pin
@@ -23,8 +26,16 @@
 #define SI4463_SDN_ENABLE     GPIO_SETPIN(SI4463_SDN)
 #define SI4463_SDN_DISABLE    GPIO_RESETPIN(SI4463_SDN)
 
-static spi_drv_t *g_pDrv;   // SPI driver
-static uint8_t g_nChannel;  // Rx/Tx channel
+// IRQ pin
+#define SI4463_IRQ            PA3
+#define SI4463_IRQ_EXTI_LINE  LL_EXTI_LINE_3
+#define SI4463_IRQ_EXTI_PORT  LL_SYSCFG_EXTI_PORTA
+#define SI4463_IRQ_IRQ        EXTI2_3_IRQn
+#define SI4463_IS_ACTIVE      (GET_PORT(SI4463_IRQ)->IDR & GET_PIN(SI4463_IRQ))
+
+static spi_drv_t*             g_pDrv;             // SPI driver
+static uint8_t                g_nChannel;         // Rx/Tx channel
+static bool                   g_bReceiveFlag;     // receive IRQ
 
 static const uint8_t Radio_Conf_Array[] = RADIO_CONFIGURATION_DATA_ARRAY;
 
@@ -40,6 +51,15 @@ bool SI4463_Init(void)
   GPIO_ClockEnable(SI4463_CS);
   GPIO_ConfigPin(SI4463_CS, mode_output, outtype_pushpull, pushpull_no, speed_high);
   SI4463_CS_DISABLE;
+
+  // config IRQ
+  GPIO_ConfigPin(SI4463_IRQ, mode_input, outtype_pushpull, pushpull_up, speed_high);
+
+  EXTI_Config(SI4463_IRQ, exti_falling);
+
+  NVIC_SetPriority(EXTI2_3_IRQn, 2);
+
+  NVIC_EnableIRQ(EXTI2_3_IRQn);
 
   // initialize SPI
   g_pDrv = spi1;
@@ -68,6 +88,7 @@ bool SI4463_Init(void)
   }
 
   g_nChannel = 0;
+  g_bReceiveFlag = false;
   return true;
 }
 
@@ -329,4 +350,13 @@ void SI4463_SetChannel(uint8_t nChannel)
 //		SI4463_Set_Property( buff_patch, 8 );
 //	}
 //}
+
+void EXTI2_3_IRQHandler(void)
+{
+  if (LL_EXTI_IsActiveFlag_0_31(SI4463_IRQ_EXTI_LINE))
+  {
+    LL_EXTI_ClearFlag_0_31(SI4463_IRQ_EXTI_LINE);
+    g_bReceiveFlag = true;
+  }
+}
 

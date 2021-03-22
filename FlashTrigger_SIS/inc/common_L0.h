@@ -65,6 +65,12 @@ typedef enum
   speed_veryhigh = LL_GPIO_SPEED_HIGH
 } pin_speed_e;
 
+typedef enum
+{
+  exti_rising = 0x01,
+  exti_falling = 0x02,
+  exti_rising_falling = 0x03
+} exti_trigger_e;
 
 // makra pro rychlou atomickou operaci zapisu
 #define GET_PORT(PIN)            ((GPIO_TypeDef*)(GPIOA_BASE + ((PIN >> 4) * ((GPIOB_BASE) - (GPIOA_BASE)))))
@@ -87,6 +93,8 @@ void GPIO_SetAFpin(gpio_pins_e ePortPin, uint8_t nAF);
 uint16_t GPIO_GetPinSource(uint16_t GPIO_Pin);
 
 void GPIO_ConfigPin(gpio_pins_e ePin, pin_mode_e eMode, pin_output_type_e eOutType, pin_pushpull_e ePull, pin_speed_e eSpeed);
+
+void EXTI_Config(gpio_pins_e ePin, exti_trigger_e eTrigger);
 
 #ifdef __cplusplus
  }
