@@ -18,13 +18,10 @@
 #define APP_OFF_INTERVAL_MS                 (1000 * 60 * 5)   // off interval po zapnuti (bez signalu) - 5 minut
 #define APP_OFF_INTERVAL_RCV_MS             (1000 * 60 * 10)  // off interval po prijeti signalu - 10 minut
 #define APP_BUTTON_INTERVAL_FOR_FLASH_MS    1500              // interval for Flash
+#define APP_FLASH_LED_INTERVAL_MS           400               // LED on by flashing
 
 const uint8_t g_CheckStamp = { 0xAA };
 const uint8_t g_FlashStamp = { 0x55 };
-
-uint16_t exitCounter = 0;
-
-AppState_t g_eState = APP_STATE_IDLE;
 
 bool g_bMaster = 0;
 
@@ -50,6 +47,11 @@ void App_Init(void)
 
   HW_SetOffInterval(APP_OFF_INTERVAL_MS);
   while (HW_IsButtonPressed_ms());
+
+  if (!g_bMaster)
+  {
+    SI4463_StartRxData();
+  }
 }
 
 void App_Exec(void)
@@ -99,7 +101,7 @@ void _MasterExec(bool bManualFlash)
 
   if (HW_IsInputActive() || bManualFlash)
   {
-    HW_LedBlink(500);
+    HW_LedBlink(APP_FLASH_LED_INTERVAL_MS);
     for (uint8_t i = 0; i < APP_FLASH_TRANSMIT_COUNT; ++i)
     {
       SI4463_SendData((uint8_t*)&g_FlashStamp, sizeof(g_FlashStamp));
@@ -125,7 +127,21 @@ void _MasterExec(bool bManualFlash)
 void _SlaveExec(bool bManualFlash)
 {
   uint8_t buffer[10];
-  uint8_t nSize = SI4463_ReadData(buffer, sizeof(buffer), 10000);
+
+  if (bManualFlash)
+  {
+    HW_FlashBlink();
+    HW_LedBlink(APP_FLASH_LED_INTERVAL_MS);
+    HW_SetOffInterval(APP_OFF_INTERVAL_RCV_MS);
+  }
+
+  if (!SI4463_IsRxReady())
+  {
+    return;
+  }
+
+  uint8_t nSize = SI4463_GetRxData(buffer, sizeof(buffer));
+  SI4463_StartRxData();
   if (nSize == 0)
   {
     return;
@@ -139,6 +155,7 @@ void _SlaveExec(bool bManualFlash)
   if (buffer[0] == g_FlashStamp)
   {
     HW_FlashBlink();
+    HW_LedBlink(APP_FLASH_LED_INTERVAL_MS);
     HW_SetOffInterval(APP_OFF_INTERVAL_RCV_MS);
   }
 

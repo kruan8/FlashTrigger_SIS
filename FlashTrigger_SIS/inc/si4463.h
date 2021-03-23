@@ -66,6 +66,9 @@ uint8_t SI4463_GetRxFifoInfo(void);
 
 void SI4463_SendData(uint8_t* pData, uint8_t size);
 uint8_t SI4463_ReadData(uint8_t* pData, uint8_t size, uint32_t nTimeout_ms);
+void SI4463_StartRxData(void);
+bool SI4463_IsRxReady(void);
+uint8_t SI4463_GetRxData(uint8_t* pData, uint8_t size);
 
 void SI4463_Patch(void);
 

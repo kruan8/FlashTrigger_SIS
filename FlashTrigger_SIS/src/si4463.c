@@ -59,8 +59,6 @@ bool SI4463_Init(void)
 
   NVIC_SetPriority(EXTI2_3_IRQn, 2);
 
-  NVIC_EnableIRQ(EXTI2_3_IRQn);
-
   // initialize SPI
   g_pDrv = spi1;
   spi_Init(g_pDrv, PA5, PA7, PA6);
@@ -289,6 +287,32 @@ uint8_t SI4463_ReadData(uint8_t* pData, uint8_t size, uint32_t nTimeout_ms)
     }
   }
 
+  uint8_t nSize = SI4463_GetRxFifoInfo();
+  SI4463_RX_FIFO(pData, nSize);
+  return nSize;
+}
+
+void SI4463_StartRxData(void)
+{
+  SI4463_ChangeState(readyState);
+  SI4463_Clear_RX_FIFO();
+  SI4463_ClearInterrupts();
+  NVIC_EnableIRQ(EXTI2_3_IRQn);
+  SI4463_RX_Start(0);
+}
+
+bool SI4463_IsRxReady(void)
+{
+  if (g_bReceiveFlag && SI4463_IsInterrupt(int_RX_ready))
+  {
+    return true;
+  }
+
+  return false;
+}
+
+uint8_t SI4463_GetRxData(uint8_t* pData, uint8_t size)
+{
   uint8_t nSize = SI4463_GetRxFifoInfo();
   SI4463_RX_FIFO(pData, nSize);
   return nSize;

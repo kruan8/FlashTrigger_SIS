@@ -7,6 +7,7 @@
 
 #include "hw.h"
 #include "timer.h"
+#include "clock.h"
 
 #include "stm32l0xx_ll_adc.h"
 #include "stm32l0xx_ll_bus.h"
@@ -42,7 +43,14 @@ static void _SysTickCallback(void);
 
 void HW_Init(void)
 {
+  // pri behu na MSI 2,1 MHz je spotreba 261 uA
+  // pri behu na HSI 16MHz je spotreba cca MCU cca 1,5 mA
+  SetHSI16();
+//  SetMSI(msi_4Mhz);
+
   Timer_Init();
+
+  SystemCoreClockUpdate();
 
   GPIO_ConfigPin(HW_LED, mode_output, outtype_pushpull, pushpull_no, speed_low);
   HW_LED_OFF;
