@@ -48,6 +48,8 @@ void HW_Init(void)
   SetHSI16();
 //  SetMSI(msi_4Mhz);
 
+  SystemCoreClockUpdate();
+
   Timer_Init();
 
   SystemCoreClockUpdate();
