@@ -12,6 +12,8 @@
 #include "stm32l0xx_ll_adc.h"
 #include "stm32l0xx_ll_bus.h"
 #include "stm32l0xx_ll_gpio.h"
+#include "stm32l0xx_ll_pwr.h"
+#include "stm32l0xx_ll_cortex.h"
 
 #define HW_BUTTON                 PA0
 
@@ -30,16 +32,25 @@
 #define HW_FLASH_ON               GPIO_SETPIN(HW_FLASH)
 #define HW_FLASH_OFF              GPIO_RESETPIN(HW_FLASH)
 
+// switch deboucing
+#define HW_CHECK_MSEC             1 // Read hardware every 1 msec - called from SysTimer
+#define HW_PRESS_MSEC            10 // Stable time before registering pressed
+#define HW_RELEASE_MSEC          20 // Stable time before registering released
+
 #define FLASH_DURATION_MS         6     // delka impulsu na tyristoru spinani blesku
 
-uint16_t g_nLedInterval;                // citac delky svitu LED
-uint16_t g_nFlashInterval_ms;           // citac delky impulsu na tyristoru
-uint32_t g_nOffInterval;                // citani intervalu do vypnuti
+uint16_t g_nLedInterval;                // counter delky svitu LED
+uint16_t g_nFlashInterval_ms;           // counter delky impulsu na tyristoru
+uint32_t g_nOffInterval;                // counter intervalu do vypnuti
+
+static volatile bool g_bDebouncedKeyPress = false;    // This holds the debounced state of the key.
+static volatile uint32_t g_nButtonStateDuration;      // active switch state duration (ms)
 
 volatile bool g_bButtonPressed = true;
-volatile uint32_t g_nButtonStateDuration;
+
 
 static void _SysTickCallback(void);
+void _DebounceSwitch(bool bSwitchState);
 
 void HW_Init(void)
 {
@@ -111,7 +122,7 @@ void HW_LedOffDiming(void)
 // pokud je tlacitko stisknuto, vraci dobu trvani stisknuti v ms, jinak 0
 uint32_t HW_IsButtonPressed_ms(void)
 {
-  if (g_bButtonPressed)
+  if (g_bDebouncedKeyPress)
   {
     return g_nButtonStateDuration;
   }
@@ -131,12 +142,11 @@ void HW_StandbyMode(void)
   RCC->APB1ENR |= RCC_APB1ENR_PWREN;  // PWR enable
   PWR->CSR |= PWR_CSR_EWUP1;          // Enable WKUP pin 1
 
-  PWR->CR |= PWR_CR_CWUF;  // Clear Wakeup flag
+  LL_PWR_ClearFlag_WU();
   PWR->CR |= PWR_CR_CSBF;  // clear Standby flag
   PWR->CR |= PWR_CR_PDDS;  // Select STANDBY mode
-  SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk; // Set SLEEPDEEP bit of Cortex-M0 System Control Register
+  LL_LPM_EnableDeepSleep();
 
-//  __WFI;  // Request Wait For Interrupt
   __ASM volatile ("wfi");
 
   while(1);
@@ -187,31 +197,47 @@ static void _SysTickCallback(void)
     g_nOffInterval--;
   }
 
-  // obsluha tlacitka (odstraneni zakmitu)
-#define DBNC_CNT  5   // e.g. 20ms with 5ms tick
-  if ((Timer_GetTicks_ms() & 0b11) == 0) // kazde 4 ms
+  // switch deboucing
+  _DebounceSwitch(GET_PORT(HW_BUTTON)->IDR & GET_PIN(HW_BUTTON));
+}
+
+// Service routine called every CHECK_MSEC to
+// debounce both edges
+void _DebounceSwitch(bool bSwitchState)
+{
+  static uint32_t Count = HW_PRESS_MSEC / HW_CHECK_MSEC;
+
+  if (bSwitchState == g_bDebouncedKeyPress)
   {
-
-    static uint8_t old_state = 0;
-    static uint8_t key_cnt = 0;
-
-//    uint8_t state = (!(BUTTON_GPIO_PORT->IDR & BUTTON_PIN));
-    uint8_t state = (GET_PORT(HW_BUTTON)->IDR & GET_PIN(HW_BUTTON));
-    if (state != old_state)
+    // Set the timer which will allow a change from the current state.
+    if (g_bDebouncedKeyPress)
     {
-      key_cnt = DBNC_CNT;
-      g_nButtonStateDuration = 0;
-    }
-    else if (key_cnt == 0)
-    {
-      g_bButtonPressed = state;
-      g_nButtonStateDuration += 4;
+      g_nButtonStateDuration++;
+      Count = HW_RELEASE_MSEC / HW_CHECK_MSEC;
     }
     else
     {
-      key_cnt--;
+      Count = HW_PRESS_MSEC / HW_CHECK_MSEC;
     }
+  }
+  else
+  {
+    // Key has changed - wait for new state to become stable.
+    g_nButtonStateDuration = 0;
+    if (--Count == 0)
+    {
+      // Timer expired - accept the change.
+      g_bDebouncedKeyPress = bSwitchState;
 
-    old_state = state;
+      // And reset the timer.
+      if (g_bDebouncedKeyPress)
+      {
+        Count = HW_RELEASE_MSEC / HW_CHECK_MSEC;
+      }
+      else
+      {
+        Count = HW_PRESS_MSEC / HW_CHECK_MSEC;
+      }
+    }
   }
 }

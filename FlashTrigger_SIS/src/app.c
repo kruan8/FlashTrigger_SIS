@@ -18,7 +18,7 @@
 #define APP_OFF_INTERVAL_MS                 (1000 * 60 * 5)   // off interval po zapnuti (bez signalu) - 5 minut
 #define APP_OFF_INTERVAL_RCV_MS             (1000 * 60 * 10)  // off interval po prijeti signalu - 10 minut
 #define APP_BUTTON_INTERVAL_FOR_FLASH_MS    1500              // interval for Flash
-#define APP_FLASH_LED_INTERVAL_MS           400               // LED on by flashing
+#define APP_FLASH_LED_INTERVAL_MS           500               // LED on by flashing
 
 const uint8_t g_CheckStamp = { 0xAA };
 const uint8_t g_FlashStamp = { 0x55 };
