@@ -303,7 +303,7 @@ void SI4463_StartRxData(void)
 
 bool SI4463_IsRxReady(void)
 {
-  if (g_bReceiveFlag && SI4463_IsInterrupt(int_RX_ready))
+  if (/*g_bReceiveFlag && */SI4463_IsInterrupt(int_RX_ready))
   {
     return true;
   }
