@@ -7,7 +7,13 @@
 
 #include "common_L0.h"
 #include "si4463.h"
-#include "radio_config_Si4463.h"
+
+#ifdef XTAL_30MHZ
+#include "radio_config_Si4463_xtal30.h"
+#else
+#include "radio_config_Si4463_xtal26.h"
+#endif
+
 #include "spi_l0.h"
 #include "timer.h"
 
